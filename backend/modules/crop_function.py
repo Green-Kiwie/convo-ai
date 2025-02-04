@@ -1,7 +1,7 @@
 # MUST USE pip install moviepy==1.0.3.
 # NEWER VERSIONS OF MOVIEPY WILL NOT WORK DUE TO BUG.
 from moviepy.editor import VideoFileClip
-from video_processor import analyze_video
+from modules.video_processor import analyze_video
 import json
 import base64
 from collections import namedtuple

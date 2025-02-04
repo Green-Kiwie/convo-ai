@@ -1,48 +1,27 @@
 import json
-from langchain_aws import ChatBedrock
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 import os
-from dotenv import load_dotenv
-from flask import Flask
-from pyngrok import ngrok
-import warnings
 import boto3
 import sys
 import traceback
-import base64
 import time
 
-from flask import request, jsonify
-from flask_cors import CORS
+from dotenv import load_dotenv
+from flask import jsonify
 
-from memory_class import local_chat_memory, combine_videos, get_mp4_binary
-from crop_function import get_video_clips
-from job_web_scrape import search_page
-from resume_reader import extract_text_from_pdf
+from langchain_aws import ChatBedrock
+from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
-
+from modules.memory_class import local_chat_memory, combine_videos, get_mp4_binary
+from modules.crop_function import get_video_clips
+from modules.job_web_scrape import search_page
+from modules.resume_reader import extract_text_from_pdf
 
 
 load_dotenv()
-app = Flask(__name__)
-CORS(app)
 
-@app.route("/init_interview_session", methods=["POST"])
-def init_interview_session() -> dict[str, int | str]:
-    """flask api function to set up an interview question. returns the first question"""
-    warnings.filterwarnings("ignore")
-
-    data = request.get_json()
-
-    website_url = data.get("website_url", "").strip()
-    custom_job_str = str(data.get("custom_job_str", "")).strip()
-    interviewee_records = str(data.get("interviewee_records")).strip()
-    mode = data.get("mode", "").strip()
-    session_key = data.get("session_key", "").strip()
-    interviewee_resume = data.get("interviewee_resume", "")
-    print(interviewee_resume)
-
+def init_interview_session(website_url: str, custom_job_str: str, interviewee_records: str,
+                           mode: str, session_key: str, interviewee_resume: bytearray) -> dict[str, int | str]:
     try:
         interviewee_resume_binary = bytes(interviewee_resume)
     except:
@@ -114,38 +93,24 @@ def init_interview_session() -> dict[str, int | str]:
             "body": json.dumps({"summary": response})
         }
         output = jsonify(output)
-        output.headers.add("Access-Control-Allow-Origin", '*')
+        # output.headers.add("Access-Control-Allow-Origin", '*')
 
-        # Return the result
         return output
     
     except Exception as e:
-        # Handle errors and return meaningful messages
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
-
-@app.route("/get_interview_question", methods=["POST"])
-def get_interview_question():
-    """Flask API function to get interview question based on user response. Returns the next question."""
-    warnings.filterwarnings("ignore")
-
-    data = request.get_json()
-    print(data)
     
-    video_input = data.get("user_input", "")#.encode("utf-8")  # Base64 encoded video data
-    print(type(video_input))
-    print(video_input[:5])
-    session_key = data.get("session_key", "").strip()
     
+def get_interview_question(video_input: bytearray, session_key: str):
     try:
         # Check if the video input is too large (80MB size limit, adjust as needed)
         if sys.getsizeof(video_input) > 1000*1000*1000:
             raise ValueError("File too big!")
 
         video_input = bytes(video_input)
-        print(video_input)
 
         time_now = current_time_seconds = int(time.time())
         output_file_path = f'response_videos/output_video{time_now}.mp4'
@@ -200,21 +165,12 @@ def get_interview_question():
 
         response = client.converse(modelId=MODEL_ID, messages=message_list)
 
-        #model_response = json.loads(response["body"].read())
-        print(response['output']['message']['content'])
-        print(response['output']['message']['content'][0])
-        print(response['output']['message']['content'][0]['text'])
-        print(json.loads(response['output']['message']['content'][0]['text']))
         next_question = json.loads(response['output']['message']['content'][0]['text'])['next_question']
         audio_transcript = json.loads(response['output']['message']['content'][0]['text'])['next_question']
 
         print(audio_transcript, next_question)
 
-
-        
         memory_obj.store_interviewee_response(audio_transcript)  # Store the video input
-
-        # Return the results as a JSON response
         output = {
             "statusCode": 200,
             "body": json.dumps({
@@ -233,11 +189,7 @@ def get_interview_question():
             "body": json.dumps({"error": str(e), "traceback": traceback.format_exc()})
         }
 
-@app.route("/get_video_analysis", methods=["POST"])
-def get_video_analysis() -> dict[str, int | str]:
-    """flask api function to get interview question based on user response. returns the next question"""
-    warnings.filterwarnings("ignore")
-
+def get_video_analysis():
     try:
         combine_videos("response_videos/")
         clip1_tuple, clip2_tuple, clip3_tuple, text_analysis = get_video_clips("main.mp4")
@@ -275,9 +227,3 @@ def get_video_analysis() -> dict[str, int | str]:
         }
    
 
-if __name__ == '__main__':
-    public_url = ngrok.connect(5000)
-    print(f"ngrok tunnel available at {public_url}")
-
-    app.run(port=5000)
-    
