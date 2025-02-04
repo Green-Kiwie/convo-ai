@@ -17,9 +17,7 @@ from flask import request, jsonify
 from flask_cors import CORS
 
 from memory_class import local_chat_memory, combine_videos, get_mp4_binary
-
 from crop_function import get_video_clips
-
 from job_web_scrape import search_page
 from resume_reader import extract_text_from_pdf
 

@@ -2,7 +2,21 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Running Backend
+First, create a virtual environment in the backend folder. 
+Next, run "pip install -r requirements.txt"
+create a .env file in the backend folder and add the following aws credentials: (AWS_ACCESS_KEY_ID=***, 
+AWS_SECRET_ACCESS_KEY=***, 
+AWS_REGION=us-east-2,
+BEDROCK_MODEL=us.amazon.nova-lite-v1:0,
+OPENAI_API_KEY=***)
+To use the ngrok server, run "python -m interview_api"
+
+## Running frontend
+Remember to run backend before frontend.
 First, run the development server:
+
+after running the backend ngrok server, get the server url and replace it in the /src/app /page.js file. 
 
 ```bash
 npm run dev
@@ -34,3 +48,5 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
