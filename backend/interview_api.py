@@ -43,7 +43,10 @@ def init_interview_session() -> dict[str, int | str]:
     interviewee_resume = data.get("interviewee_resume", "")
     print(interviewee_resume)
 
-    interviewee_resume_binary = bytes(interviewee_resume)
+    try:
+        interviewee_resume_binary = bytes(interviewee_resume)
+    except:
+        interviewee_resume_binary = None
      
     if website_url:
         model_input = search_page(website_url)

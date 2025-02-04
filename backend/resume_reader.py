@@ -2,6 +2,9 @@ import PyPDF2
 from io import BytesIO
 
 def extract_text_from_pdf(pdf_binary):
+    if pdf_binary == None:
+        return ""
+    
     # Create a PDF file reader object
     pdf_reader = PyPDF2.PdfReader(BytesIO(pdf_binary))
     
