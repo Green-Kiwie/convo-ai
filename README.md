@@ -14,6 +14,8 @@ To use the ngrok server, run "python -m interview_api"
 
 ## Running frontend
 Remember to run backend before frontend.
+
+If first time running, run "npm install --legacy-peer-deps"
 First, run the development server:
 
 after running the backend ngrok server, get the server url and replace it in the /src/app /page.js file. 
