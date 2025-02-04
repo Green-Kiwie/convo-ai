@@ -20,13 +20,8 @@ from modules.resume_reader import extract_text_from_pdf
 
 load_dotenv()
 
-def init_interview_session(website_url: str, custom_job_str: str, interviewee_records: str,
-                           mode: str, session_key: str, interviewee_resume: bytearray) -> dict[str, int | str]:
-    try:
-        interviewee_resume_binary = bytes(interviewee_resume)
-    except:
-        interviewee_resume_binary = None
-     
+def get_job_data(website_url: str, custom_job_str: str) -> str:
+    """returns the job data as a string based on both url and input job string"""
     if website_url:
         model_input = search_page(website_url)
     elif custom_job_str:
@@ -34,27 +29,80 @@ def init_interview_session(website_url: str, custom_job_str: str, interviewee_re
     else:
         raise ValueError("no website url or custom job str provided")
     
+    return model_input
+
+def parse_resume(interviewee_resume: bytearray) -> bytes:
+    """returns the resuem in bytes"""
+    try:
+        interviewee_resume_binary = bytes(interviewee_resume)
+    except:
+        interviewee_resume_binary = None
+
+    interviewee_resume = extract_text_from_pdf(interviewee_resume_binary)
+    return interviewee_resume
+    
+def parse_video(video_input: bytearray, file_limit: int) -> bytes:
+    if sys.getsizeof(video_input) > file_limit:
+            raise ValueError("File too big!")
+
+    video_input = bytes(video_input)
+    return video_input
+
+def write_video_to_file(video_data: bytes) -> None:
+    time_now = int(time.time())
+    output_file_path = f'response_videos/output_video{time_now}.mp4'
+
+    with open(output_file_path, 'wb') as f:
+        f.write(video_data)
+
+
+def setup_langchain(prompt: str):
+    """sets up the langchain pipeline object"""
+    bedrock_model = os.getenv("BEDROCK_MODEL")
+    region = os.getenv('AWS_REGION')
+
+    model_kwargs = { 
+        "max_tokens_to_sample": 512,
+        "temperature": 0.0,
+    }
+
+    llm = ChatBedrock(
+        region_name = region,
+        model_id=bedrock_model,
+        model_kwargs=model_kwargs,
+    )
+
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+
+    return chain
+
+def invoke_chain(chain, model_inputs: dict):
+    response = chain.invoke(model_inputs)
+    return response
+
+def get_bedrock_response(message_list: list) -> tuple[str, str]:
+    client = boto3.client("bedrock-runtime", region_name="us-east-2")
+    MODEL_ID = "us.amazon.nova-lite-v1:0"
+
+    response = client.converse(modelId=MODEL_ID, messages=message_list)
+
+    next_question = json.loads(response['output']['message']['content'][0]['text'])['next_question']
+    audio_transcript = json.loads(response['output']['message']['content'][0]['text'])['next_question']
+
+    print("bedrock response: ", audio_transcript, next_question)
+    return (audio_transcript, next_question)
+    
+def init_interview_session(website_url: str, custom_job_str: str, interviewee_records: str,
+                           mode: str, session_key: str, interviewee_resume: bytearray) -> dict[str, int | str]:
+    
+    interviewee_records += parse_resume(interviewee_resume)
+    model_input = get_job_data(website_url, custom_job_str)
+    
+    print(interviewee_records)
     print(model_input)
 
     try:
-        interviewee_records += extract_text_from_pdf(interviewee_resume_binary)
-        print(interviewee_records)
-
-        bedrock_model = os.getenv("BEDROCK_MODEL")
-        region = os.getenv('AWS_REGION')
-
-        model_kwargs = { 
-            "max_tokens_to_sample": 512,
-            "temperature": 0.0,
-        }
-
-        llm = ChatBedrock(
-            region_name = region,
-            model_id=bedrock_model,
-            model_kwargs=model_kwargs,
-        )
-
-        # Configure LangChain components
         prompt_template = """
                             You are a interviewer and you will be interviewing an applicant for a job. The job information is either given as a website or a string with the job description. 
                             If you are given a website, use the website scraping tool to retrieve the information from the website. 
@@ -76,24 +124,19 @@ def init_interview_session(website_url: str, custom_job_str: str, interviewee_re
                           """
         prompt = PromptTemplate.from_template(template=prompt_template)
 
-        # Create LangChain pipeline
-        output_parser = StrOutputParser()
-        chain = prompt | llm | output_parser
-
-        # Run the pipeline
-        response = chain.invoke({"job_info": model_input, "interviewee_info": interviewee_records})
-
+        chain = setup_langchain(prompt)
+        response = invoke_chain(chain, {"job_info": model_input, "interviewee_info": interviewee_records})
+        
         chat_memory = local_chat_memory(session_key)
         chat_memory.reset_interview()
-        chat_memory.store_interviewer_question(response)
         chat_memory.store_job_description(model_input)
-
+        chat_memory.store_interviewer_question(response)
+        
         output = {
             "statusCode": 200,
             "body": json.dumps({"summary": response})
         }
         output = jsonify(output)
-        # output.headers.add("Access-Control-Allow-Origin", '*')
 
         return output
     
@@ -101,34 +144,16 @@ def init_interview_session(website_url: str, custom_job_str: str, interviewee_re
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
-        }
-    
+        }  
     
 def get_interview_question(video_input: bytearray, session_key: str):
     try:
-        # Check if the video input is too large (80MB size limit, adjust as needed)
-        if sys.getsizeof(video_input) > 1000*1000*1000:
-            raise ValueError("File too big!")
+        video_input = parse_video(video_input, 1000*1000*1000)
+        write_video_to_file(video_input)
 
-        video_input = bytes(video_input)
-
-        time_now = current_time_seconds = int(time.time())
-        output_file_path = f'response_videos/output_video{time_now}.mp4'
-
-        # Write the byte string to the file
-        with open(output_file_path, 'wb') as f:
-            f.write(video_input)
-
-
-        client = boto3.client("bedrock-runtime", region_name="us-east-2")
-
-        MODEL_ID = "us.amazon.nova-lite-v1:0"
-
-        # Fetch chat history (assuming your implementation is correct)
         memory_obj = local_chat_memory(session_key)
         chat_history = memory_obj.get_chat_history()
-
-
+        
         message_list = [
             {
                 "role": "user",
@@ -163,14 +188,10 @@ def get_interview_question(video_input: bytearray, session_key: str):
             }
         ] 
 
-        response = client.converse(modelId=MODEL_ID, messages=message_list)
+        audio_transcript, next_question = get_bedrock_response(message_list)
+        memory_obj.store_interviewee_response(audio_transcript)  
+        print(chat_history)
 
-        next_question = json.loads(response['output']['message']['content'][0]['text'])['next_question']
-        audio_transcript = json.loads(response['output']['message']['content'][0]['text'])['next_question']
-
-        print(audio_transcript, next_question)
-
-        memory_obj.store_interviewee_response(audio_transcript)  # Store the video input
         output = {
             "statusCode": 200,
             "body": json.dumps({
@@ -179,8 +200,6 @@ def get_interview_question(video_input: bytearray, session_key: str):
             })
         }
         output = jsonify(output)
-        output.headers.add("Access-Control-Allow-Origin", '*')
-
         return output
 
     except Exception as e:
@@ -191,8 +210,8 @@ def get_interview_question(video_input: bytearray, session_key: str):
 
 def get_video_analysis():
     try:
-        combine_videos("response_videos/")
-        clip1_tuple, clip2_tuple, clip3_tuple, text_analysis = get_video_clips("main.mp4")
+        main_video_path = combine_videos("response_videos/")
+        clip1_tuple, clip2_tuple, clip3_tuple, text_analysis = get_video_clips(main_video_path)
 
         clip1_binary = get_mp4_binary(clip1_tuple.directory_name)
         clip2_binary = get_mp4_binary(clip2_tuple.directory_name)
@@ -213,14 +232,11 @@ def get_video_analysis():
                 "video3_feedback": clip3_tuple.event_feedback
             })
         }
-        output = jsonify(output)
-        output.headers.add("Access-Control-Allow-Origin", '*')
 
-        # Return the result
+        output = jsonify(output)
         return output
 
     except Exception as e:
-        # Handle errors and return meaningful messages
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e), "traceback": traceback.format_exc()})

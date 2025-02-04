@@ -59,7 +59,7 @@ def combine_videos(directory: str):
 
     if clips:  # Check if there are any clips to concatenate
         output_clip = concatenate_videoclips(clips, method="compose")
-        output_file = "main.mp4"
+        output_file = "final_videos/main.mp4"
         output_clip.write_videofile(str(output_file))
 
         # Remove original video files after concatenation
@@ -68,13 +68,16 @@ def combine_videos(directory: str):
                 os.remove(video_path)
 
         print(f"Videos have been combined and saved as {output_file}")
+        return output_file
     else:
         print("No video files found to combine.")
 
 def get_mp4_binary(filepath):
+    """returns the binary of the given video file and deletes the video"""
     video_filepath = Path(filepath)
     with open(video_filepath, "rb") as file:
         video_binary = file.read()
+    os.remove(video_filepath)
 
     int8_array = np.frombuffer(video_binary, dtype=np.int8)
 
