@@ -52,3 +52,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 
+to do:
+1. remove openai aspects, convert to bedrock
+2. instead of transferrring binary, transfer using s3
+3. enable apis using lambda
