@@ -81,17 +81,17 @@ def _get_next_question_prompt_template_s3(bucket: str, video_file_name: str, cha
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "video": {
-                                "format": "mp4",
-                                "source": {
-                                    "s3Location": {
-                                        "uri": "s3://convo-ai-io/test/WIN_20250206_17_47_02_Pro.mp4", 
-                                        "bucketOwner": "597088029429"
-                                    }
-                                }
-                            }
-                        },
+                        # {
+                        #     "video": {
+                        #         "format": "mp4",
+                        #         "source": {
+                        #             "s3Location": {
+                        #                 "uri": "s3://convo-ai-io/test/WIN_20250206_17_47_02_Pro.mp4", 
+                        #                 "bucketOwner": "597088029429"
+                        #             }
+                        #         }
+                        #     }
+                        # },
                         {
                             "text": "Provide video titles for this clip."
                         }
@@ -259,7 +259,7 @@ def invoke_chain(chain, model_inputs: dict):
 def get_bedrock_response(message_list: list) -> tuple[str, str]:
     client = boto3.client("bedrock-runtime", region_name="us-east-2")
     # MODEL_ID = os.getenv("BEDROCK_MODEL")
-    MODEL_ID = "us.amazon.nova-pro-v1:0"
+    MODEL_ID = "us.amazon.nova-lite-v1:0"
     # Define your system prompt(s).
     system_list = [
         {
@@ -271,8 +271,6 @@ def get_bedrock_response(message_list: list) -> tuple[str, str]:
         {
             "role": "user",
             "content": [
-                
-                
                 {
                     "video": {
                         "format": "mp4",  # Specify the video format
@@ -291,10 +289,10 @@ def get_bedrock_response(message_list: list) -> tuple[str, str]:
     inf_params = {"max_new_tokens": 300, "top_p": 0.1, "top_k": 20, "temperature": 0.3}
 
     native_request = {
-        "schemaVersion": "messages-v1",
+        #"schemaVersion": "messages-v1",
         "messages": message_list,
-        "system": system_list,
-        "inferenceConfig": inf_params,
+        #"system": system_list,
+        #"inferenceConfig": inf_params,
     }
     response = client.invoke_model(modelId=MODEL_ID, body=json.dumps(native_request))
 
@@ -478,8 +476,7 @@ if __name__ == "__main__":
                         "format": "mp4",
                         "source": {
                             "s3Location": {
-                                "uri": "s3://convo-ai-io/test/test2.mp4", 
-                                "bucketOwner": "597088029429"
+                                "uri": "s3://convo-ai-io/test/main.mp4", 
                             }
                         }
                     }
@@ -488,19 +485,23 @@ if __name__ == "__main__":
                     "text": "Provide video titles for this clip."
                 }
             ]
+        },
+        {
+            "role": 'assistant',
+            'content': [{'text': 'Here are the titles: '}]
         }
     ]
     # Configure the inference parameters.
     inf_params = {"max_new_tokens": 300, "top_p": 0.1, "top_k": 20, "temperature": 0.3}
 
     native_request = {
-        "schemaVersion": "messages-v1",
+        #"schemaVersion": "messages-v1",
         "messages": message_list,
-        "system": system_list,
-        "inferenceConfig": inf_params,
+        #"system": system_list,
+        #"inferenceConfig": inf_params,
     }
     # Invoke the model and extract the response body.
-    response = client.invoke_model(modelId=MODEL_ID, body=json.dumps(native_request))
+    response = client.converse(modelId = MODEL_ID, messages=message_list)
     model_response = json.loads(response["body"].read())
     # Pretty print the response JSON.
     print("[Full Response]")
