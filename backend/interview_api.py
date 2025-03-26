@@ -450,64 +450,87 @@ def get_interview_question_s3(session_directory: str, video_directory: str):
 
 
 if __name__ == "__main__":
-    import base64
-    import boto3
-    import json
-    # Create a Bedrock Runtime client in the AWS Region of your choice.
-    client = boto3.client(
-        "bedrock-runtime",
-        region_name="us-east-2",
-    )
+    # import base64
+    # import boto3
+    # import json
+    # # Create a Bedrock Runtime client in the AWS Region of your choice.
+    # client = boto3.client(
+    #     "bedrock-runtime",
+    #     region_name="us-east-2",
+    # )
 
-    MODEL_ID = "us.amazon.nova-lite-v1:0"
-    # Define your system prompt(s).
-    system_list = [
-        {
-            "text": "You are an expert media analyst. When the user provides you with a video, provide 3 potential video titles"
-        }
-    ]
-    # Define a "user" message including both the image and a text prompt.
-    message_list = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "video": {
-                        "format": "mp4",
-                        "source": {
-                            "s3Location": {
-                                "uri": "s3://convo-ai-io/test/main.mp4", 
-                            }
-                        }
-                    }
-                },
-                {
-                    "text": "Provide video titles for this clip."
-                }
-            ]
-        },
-        {
-            "role": 'assistant',
-            'content': [{'text': 'Here are the titles: '}]
-        }
-    ]
-    # Configure the inference parameters.
-    inf_params = {"max_new_tokens": 300, "top_p": 0.1, "top_k": 20, "temperature": 0.3}
+    # MODEL_ID = "us.amazon.nova-lite-v1:0"
+    # # Define your system prompt(s).
+    # system_list = [
+    #     {
+    #         "text": "You are an expert media analyst. When the user provides you with a video, provide 3 potential video titles"
+    #     }
+    # ]
+    # # Define a "user" message including both the image and a text prompt.
+    # message_list = [
+    #     {
+    #         "role": "user",
+    #         "content": [
+    #             {
+    #                 "video": {
+    #                     "format": "mp4",
+    #                     "source": {
+    #                         "s3Location": {
+    #                             "uri": "s3://convo-ai-io/test/main.mp4", 
+    #                         }
+    #                     }
+    #                 }
+    #             },
+    #             {
+    #                 "text": "Provide video titles for this clip."
+    #             }
+    #         ]
+    #     },
+    #     {
+    #         "role": 'assistant',
+    #         'content': [{'text': 'Here are the titles: '}]
+    #     }
+    # ]
+    # # Configure the inference parameters.
+    # inf_params = {"max_new_tokens": 300, "top_p": 0.1, "top_k": 20, "temperature": 0.3}
 
-    native_request = {
-        #"schemaVersion": "messages-v1",
-        "messages": message_list,
-        #"system": system_list,
-        #"inferenceConfig": inf_params,
-    }
-    # Invoke the model and extract the response body.
-    response = client.converse(modelId = MODEL_ID, messages=message_list)
-    model_response = json.loads(response["body"].read())
-    # Pretty print the response JSON.
-    print("[Full Response]")
-    print(json.dumps(model_response, indent=2))
-    # Print the text content for easy readability.
-    content_text = model_response["output"]["message"]["content"][0]["text"]
-    print("\n[Response Content Text]")
-    print(content_text)
+    # native_request = {
+    #     #"schemaVersion": "messages-v1",
+    #     "messages": message_list,
+    #     #"system": system_list,
+    #     #"inferenceConfig": inf_params,
+    # }
+    # # Invoke the model and extract the response body.
+    # response = client.converse(modelId = MODEL_ID, messages=message_list)
+    # model_response = json.loads(response["body"].read())
+    # # Pretty print the response JSON.
+    # print("[Full Response]")
+    # print(json.dumps(model_response, indent=2))
+    # # Print the text content for easy readability.
+    # content_text = model_response["output"]["message"]["content"][0]["text"]
+    # print("\n[Response Content Text]")
+    # print(content_text)
         
+    # import google.generativeai as genai
+
+    # genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+    # model = genai.GenerativeModel("gemini-2.0-flash")
+    # response = model.generate_content("What is the capital of France?")
+    # print(response.text)
+
+    from google import genai
+    from google.genai.types import HttpOptions, Part
+
+    client = genai.Client(http_options=HttpOptions(api_version="v1"))
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001",
+        contents=[
+            Part.from_uri(
+                file_uri="gs://convo_development/main.mp4",
+                mime_type="video/mp4",
+            ),
+            "Provide video titles for this clip.",
+        ],
+    )
+    print(response.text)

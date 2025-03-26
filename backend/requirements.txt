@@ -9,4 +9,4 @@ beautifulsoup4
 selenium
 openai
 pyPDF2
-google-generativeai
+google-genai
