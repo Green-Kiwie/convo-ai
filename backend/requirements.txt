@@ -10,3 +10,4 @@ selenium
 openai
 pyPDF2
 google-genai
+functions-framework==3.*
