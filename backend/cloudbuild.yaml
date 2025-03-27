@@ -1,0 +1,13 @@
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+    - functions
+    - deploy
+    - init_interview
+    - --entry-point=gcp_init_interview_session
+    - --runtime=python311
+    - --trigger-http
+    - --allow-unauthenticated
+    - --source=.
+    - --region=us-central1
+timeout: 600s
