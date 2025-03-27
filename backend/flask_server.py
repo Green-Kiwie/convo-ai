@@ -5,7 +5,7 @@ from flask import request
 from flask_cors import CORS
 from pyngrok import ngrok
 
-import interview_api
+import backend.interview_api_gcp as interview_api_gcp
 
 app = Flask(__name__)
 CORS(app)
@@ -24,7 +24,7 @@ def flask_init_interview_session() -> dict[str, int | str]:
     session_key = data.get("session_key", "").strip()
     interviewee_resume = data.get("interviewee_resume", "")
 
-    return interview_api.init_interview_session(website_url, custom_job_str, interviewee_records, mode, session_key, interviewee_resume)
+    return interview_api_gcp.init_interview_session(website_url, custom_job_str, interviewee_records, mode, session_key, interviewee_resume)
     
 @app.route("/get_interview_question", methods=["POST"])
 def flask_get_interview_question():
@@ -36,13 +36,13 @@ def flask_get_interview_question():
     video_input = data.get("user_input", "") # Base64 encoded video data
     session_key = data.get("session_key", "").strip()
 
-    return interview_api.get_interview_question(video_input, session_key)
+    return interview_api_gcp.get_interview_question(video_input, session_key)
 
 @app.route("/get_video_analysis", methods=["POST"])
 def flask_get_video_analysis() -> dict[str, int | str]:
     """flask api function to get interview question based on user response. returns the next question"""
     warnings.filterwarnings("ignore")
-    return interview_api.get_video_analysis()
+    return interview_api_gcp.get_video_analysis()
 
 @app.route("/get_s3_details", methods=["POST"])
 def flask_get_s3_details() -> dict[str, int | str]:
@@ -50,7 +50,7 @@ def flask_get_s3_details() -> dict[str, int | str]:
     data = request.get_json()
     session_key = str(data.get("session_key", ""))
 
-    return interview_api.get_s3_details(session_key)
+    return interview_api_gcp.get_s3_details(session_key)
 
 @app.route("/init_interview_session_s3", methods=["POST"])
 def flask_init_interview_session_s3() -> dict[str, int | str]:
@@ -66,7 +66,7 @@ def flask_init_interview_session_s3() -> dict[str, int | str]:
     session_directory = data.get("session_directory", "").strip()
     resume_file_path = data.get("resume_file_path", "")
 
-    return interview_api.init_interview_session_s3(website_url, custom_job_str, interviewee_records, mode, session_directory, resume_file_path)
+    return interview_api_gcp.init_interview_session_s3(website_url, custom_job_str, interviewee_records, mode, session_directory, resume_file_path)
 
 @app.route("/get_interview_question_s3", methods=["POST"])
 def flask_get_interview_question_s3():
@@ -76,7 +76,7 @@ def flask_get_interview_question_s3():
     session_directory = str(data.get("session_directory", ""))
     video_directory = str(data.get("video_directory", ""))
 
-    return interview_api.get_interview_question_s3(session_directory, video_directory)
+    return interview_api_gcp.get_interview_question_s3(session_directory, video_directory)
 
 if __name__ == '__main__':
     public_url = ngrok.connect(5000)
